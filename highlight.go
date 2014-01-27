@@ -225,6 +225,10 @@ func NewScanner(src []byte) *Scanner {
 			return 0, nil, nil
 		}
 
+		alnum := func(r rune) bool {
+			return unicode.IsLetter(r) || unicode.IsDigit(r) || byte(r) == '_'
+		}
+
 		r, _ := utf8.DecodeRune(data)
 		if unicode.IsUpper(r) {
 			s.typ = true
@@ -234,9 +238,7 @@ func NewScanner(src []byte) *Scanner {
 			s.kind = PLAINTEXT
 		}
 		if s.typ || s.name {
-			i := lastContiguousIndexFunc(data, func(r rune) bool {
-				return unicode.IsLetter(r) || unicode.IsDigit(r)
-			})
+			i := lastContiguousIndexFunc(data, alnum)
 			if i >= 0 {
 				s.typ, s.name = false, false
 				if _, isKwd := Keywords[string(data[0:i+1])]; isKwd {
@@ -268,7 +270,7 @@ func NewScanner(src []byte) *Scanner {
 			return 0, nil, nil
 		}
 
-		if i := bytes.IndexAny(data, "{([])}<>,./+-=;:|\\!@#$%^&*\"'`"); i >= 0 {
+		if i := lastContiguousIndexFunc(data, func(r rune) bool { return !alnum(r) && !unicode.IsSpace(r) }); i >= 0 {
 			c := data[0]
 			if c == '`' || c == '\'' || c == '"' {
 				s.kind = STRING

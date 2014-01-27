@@ -74,8 +74,7 @@ func TestAnnotate(t *testing.T) {
 	src := []byte(`a:=2`)
 	want := []*annotate.Annotation{
 		{Start: 0, End: 1, Left: []byte(`<span class="pln">`), Right: []byte("</span>")},
-		{Start: 1, End: 2, Left: []byte(`<span class="pun">`), Right: []byte("</span>")},
-		{Start: 2, End: 3, Left: []byte(`<span class="pun">`), Right: []byte("</span>")},
+		{Start: 1, End: 3, Left: []byte(`<span class="pun">`), Right: []byte("</span>")},
 		{Start: 3, End: 4, Left: []byte(`<span class="dec">`), Right: []byte("</span>")},
 	}
 	got, err := Annotate(src, HTMLAnnotator(DefaultHTMLConfig))
@@ -86,7 +85,7 @@ func TestAnnotate(t *testing.T) {
 	if !reflect.DeepEqual(want, got) {
 		t.Errorf("want %+v, got %#v", want, got)
 		for _, g := range got {
-			t.Logf("%+v %q", g, g.Left)
+			t.Logf("%+v  %q  LEFT=%q RIGHT=%q", g, src[g.Start:g.End], g.Left, g.Right)
 		}
 	}
 }
