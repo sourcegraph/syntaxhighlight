@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"io"
+	"text/template"
 	"unicode"
 	"unicode/utf8"
 )
@@ -85,10 +86,7 @@ func (p htmlPrinter) Print(w io.Writer, tok []byte, kind int) error {
 			return err
 		}
 	}
-	_, err := w.Write(tok)
-	if err != nil {
-		return err
-	}
+	template.HTMLEscape(w, tok)
 	if class != "" {
 		_, err := w.Write([]byte(`</span>`))
 		if err != nil {
