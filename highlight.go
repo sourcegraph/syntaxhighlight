@@ -270,13 +270,18 @@ func NewScanner(src []byte) *Scanner {
 			return 0, nil, nil
 		}
 
-		if i := lastContiguousIndexFunc(data, func(r rune) bool { return !alnum(r) && !unicode.IsSpace(r) }); i >= 0 {
-			c := data[0]
-			if c == '`' || c == '\'' || c == '"' {
-				s.kind = STRING
-				s.quot = c
-				return 0, nil, nil
-			}
+		isQuot := func(r rune) bool {
+			c := byte(r)
+			return c == '`' || c == '\'' || c == '"'
+		}
+
+		if isQuot(r) {
+			s.kind = STRING
+			s.quot = byte(r)
+			return 0, nil, nil
+		}
+
+		if i := lastContiguousIndexFunc(data, func(r rune) bool { return !alnum(r) && !unicode.IsSpace(r) && !isQuot(r) }); i >= 0 {
 			s.kind = PUNCTUATION
 			return i + 1, data[0 : i+1], nil
 		}
