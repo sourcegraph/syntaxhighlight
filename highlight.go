@@ -29,7 +29,7 @@ type Printer interface {
 	Print(w io.Writer, tok []byte, kind int) error
 }
 
-type htmlPrinter struct {
+type htmlConfig struct {
 	String        string
 	Keyword       string
 	Comment       string
@@ -43,6 +43,8 @@ type htmlPrinter struct {
 	HTMLAttrValue string
 	Decimal       string
 }
+
+type htmlPrinter htmlConfig
 
 func (p htmlPrinter) Print(w io.Writer, tok []byte, kind int) error {
 	var class string
@@ -96,9 +98,9 @@ func (p htmlPrinter) Print(w io.Writer, tok []byte, kind int) error {
 	return nil
 }
 
-// DefaultHTMLPrinter's class names match those of
+// DefaultHTMLConfig's class names match those of
 // [google-code-prettify](https://code.google.com/p/google-code-prettify/).
-var DefaultHTMLPrinter = htmlPrinter{
+var DefaultHTMLConfig = htmlConfig{
 	String:        "str",
 	Keyword:       "kwd",
 	Comment:       "com",
@@ -131,7 +133,7 @@ func Print(s *Scanner, w io.Writer, p Printer) error {
 
 func AsHTML(src []byte) ([]byte, error) {
 	var buf bytes.Buffer
-	err := Print(NewScanner(src), &buf, DefaultHTMLPrinter)
+	err := Print(NewScanner(src), &buf, htmlPrinter(DefaultHTMLConfig))
 	if err != nil {
 		return nil, err
 	}
