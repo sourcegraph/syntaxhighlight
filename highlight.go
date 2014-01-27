@@ -279,6 +279,10 @@ func NewScanner(src []byte) *Scanner {
 			return i + 1, data[0 : i+1], nil
 		}
 
+		if atEOF {
+			return len(data), data, nil
+		}
+
 		return 0, nil, nil
 	})
 	return s
