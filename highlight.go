@@ -3,6 +3,7 @@ package syntaxhighlight
 import (
 	"bufio"
 	"bytes"
+	"github.com/sourcegraph/annotate"
 	"io"
 	"text/template"
 	"unicode"
@@ -29,7 +30,7 @@ type Printer interface {
 	Print(w io.Writer, tok []byte, kind int) error
 }
 
-type htmlConfig struct {
+type HTMLConfig struct {
 	String        string
 	Keyword       string
 	Comment       string
@@ -44,36 +45,40 @@ type htmlConfig struct {
 	Decimal       string
 }
 
-type htmlPrinter htmlConfig
+type HTMLPrinter HTMLConfig
 
-func (p htmlPrinter) Print(w io.Writer, tok []byte, kind int) error {
-	var class string
+func (c HTMLConfig) class(kind int) string {
 	switch kind {
 	case STRING:
-		class = p.String
+		return c.String
 	case KEYWORD:
-		class = p.Keyword
+		return c.Keyword
 	case COMMENT:
-		class = p.Comment
+		return c.Comment
 	case TYPE:
-		class = p.Type
+		return c.Type
 	case LITERAL:
-		class = p.Literal
+		return c.Literal
 	case PUNCTUATION:
-		class = p.Punctuation
+		return c.Punctuation
 	case PLAINTEXT:
-		class = p.Plaintext
+		return c.Plaintext
 	case TAG:
-		class = p.Tag
+		return c.Tag
 	case HTMLTAG:
-		class = p.HTMLTag
+		return c.HTMLTag
 	case HTMLATTRNAME:
-		class = p.HTMLAttrName
+		return c.HTMLAttrName
 	case HTMLATTRVALUE:
-		class = p.HTMLAttrValue
+		return c.HTMLAttrValue
 	case DECIMAL:
-		class = p.Decimal
+		return c.Decimal
 	}
+	return ""
+}
+
+func (p HTMLPrinter) Print(w io.Writer, tok []byte, kind int) error {
+	class := ((HTMLConfig)(p)).class(kind)
 	if class != "" {
 		_, err := w.Write([]byte(`<span class="`))
 		if err != nil {
@@ -98,9 +103,29 @@ func (p htmlPrinter) Print(w io.Writer, tok []byte, kind int) error {
 	return nil
 }
 
+type Annotator interface {
+	Annotate(start int, tok []byte, kind int) (*annotate.Annotation, error)
+}
+
+type HTMLAnnotator HTMLConfig
+
+func (a HTMLAnnotator) Annotate(start int, tok []byte, kind int) (*annotate.Annotation, error) {
+	class := ((HTMLConfig)(a)).class(kind)
+	if class != "" {
+		left := []byte(`<span class="`)
+		left = append(left, []byte(class)...)
+		left = append(left, []byte(`">`)...)
+		return &annotate.Annotation{
+			Start: start, End: start + len(tok),
+			Left: left, Right: []byte("</span>"),
+		}, nil
+	}
+	return nil, nil
+}
+
 // DefaultHTMLConfig's class names match those of
 // [google-code-prettify](https://code.google.com/p/google-code-prettify/).
-var DefaultHTMLConfig = htmlConfig{
+var DefaultHTMLConfig = HTMLConfig{
 	String:        "str",
 	Keyword:       "kwd",
 	Comment:       "com",
@@ -120,7 +145,7 @@ func Print(s *Scanner, w io.Writer, p Printer) error {
 		tok, kind := s.Token()
 		err := p.Print(w, tok, kind)
 		if err != nil {
-			return nil
+			return err
 		}
 	}
 
@@ -131,9 +156,33 @@ func Print(s *Scanner, w io.Writer, p Printer) error {
 	return nil
 }
 
+func Annotate(src []byte, a Annotator) ([]*annotate.Annotation, error) {
+	s := NewScanner(src)
+
+	var anns []*annotate.Annotation
+	read := 0
+	for s.Scan() {
+		tok, kind := s.Token()
+		ann, err := a.Annotate(read, tok, kind)
+		if err != nil {
+			return nil, err
+		}
+		read += len(tok)
+		if ann != nil {
+			anns = append(anns, ann)
+		}
+	}
+
+	if err := s.Err(); err != nil {
+		return nil, err
+	}
+
+	return anns, nil
+}
+
 func AsHTML(src []byte) ([]byte, error) {
 	var buf bytes.Buffer
-	err := Print(NewScanner(src), &buf, htmlPrinter(DefaultHTMLConfig))
+	err := Print(NewScanner(src), &buf, HTMLPrinter(DefaultHTMLConfig))
 	if err != nil {
 		return nil, err
 	}
