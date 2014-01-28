@@ -1,6 +1,8 @@
 # syntaxhighlight
 
-A Go package for syntax highlighting of code.
+Package syntaxhighlight provides syntax highlighting for code. It currently uses
+a language-independent lexer and performs decently on JavaScript, Java, Ruby,
+Python, Go, and C.
 
 **[Documentation on Sourcegraph](https://sourcegraph.com/github.com/sourcegraph/syntaxhighlight)**
 
