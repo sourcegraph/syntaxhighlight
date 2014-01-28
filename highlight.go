@@ -192,7 +192,6 @@ func AsHTML(src []byte) ([]byte, error) {
 type Scanner struct {
 	*bufio.Scanner
 	kind int
-	quot byte
 	typ  bool
 	name bool
 }
@@ -205,16 +204,23 @@ func NewScanner(src []byte) *Scanner {
 			return 0, nil, nil
 		}
 
-		if s.quot != 0 {
+		r, _ := utf8.DecodeRune(data)
+
+		isQuot := func(r rune) bool {
+			c := byte(r)
+			return c == '`' || c == '\'' || c == '"'
+		}
+
+		if isQuot(r) {
+			s.kind = STRING
 			for j := 1; j < len(data); {
-				i := bytes.IndexByte(data[j:], s.quot)
+				i := bytes.IndexRune(data[j:], r)
 				if i >= 0 {
 					i += j
 					if i > 0 && data[i-1] == '\\' {
 						j += i
 						continue
 					}
-					s.quot = 0
 					return i + 1, data[0 : i+1], nil
 				}
 				if atEOF {
@@ -229,7 +235,6 @@ func NewScanner(src []byte) *Scanner {
 			return unicode.IsLetter(r) || unicode.IsDigit(r) || byte(r) == '_'
 		}
 
-		r, _ := utf8.DecodeRune(data)
 		if unicode.IsUpper(r) {
 			s.typ = true
 			s.kind = TYPE
@@ -267,17 +272,6 @@ func NewScanner(src []byte) *Scanner {
 			if atEOF {
 				return len(data), data, nil
 			}
-			return 0, nil, nil
-		}
-
-		isQuot := func(r rune) bool {
-			c := byte(r)
-			return c == '`' || c == '\'' || c == '"'
-		}
-
-		if isQuot(r) {
-			s.kind = STRING
-			s.quot = byte(r)
 			return 0, nil, nil
 		}
 
