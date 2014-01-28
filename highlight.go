@@ -231,14 +231,17 @@ func NewScanner(src []byte) *Scanner {
 			return 0, nil, nil
 		}
 
+		alpha := func(r rune) bool {
+			return byte(r) == '_' || unicode.IsLetter(r)
+		}
 		alnum := func(r rune) bool {
-			return unicode.IsLetter(r) || unicode.IsDigit(r) || byte(r) == '_'
+			return alpha(r) || unicode.IsDigit(r)
 		}
 
 		if unicode.IsUpper(r) {
 			s.typ = true
 			s.kind = TYPE
-		} else if unicode.IsLetter(r) {
+		} else if alpha(r) {
 			s.name = true
 			s.kind = PLAINTEXT
 		}
