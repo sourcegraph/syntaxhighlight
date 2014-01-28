@@ -281,6 +281,31 @@ func NewScanner(src []byte) *Scanner {
 			return 0, nil, nil
 		}
 
+		lineComments := [][]byte{[]byte("//"), []byte{'#'}}
+		for _, lc := range lineComments {
+			if i := bytes.Index(data, lc); i == 0 {
+				s.kind = COMMENT
+				if i := bytes.IndexByte(data, '\n'); i >= 0 {
+					return i + 1, data[0 : i+1], nil
+				}
+				if atEOF {
+					return len(data), data, nil
+				}
+				return 0, nil, nil
+			}
+		}
+
+		if i := bytes.Index(data, []byte("/*")); i == 0 {
+			s.kind = COMMENT
+			if i := bytes.Index(data, []byte("*/")); i >= 0 {
+				return i + 2, data[0 : i+2], nil
+			}
+			if atEOF {
+				return len(data), data, nil
+			}
+			return 0, nil, nil
+		}
+
 		if i := lastContiguousIndexFunc(data, func(r rune) bool { return !alnum(r) && !unicode.IsSpace(r) && !isQuot(r) }); i >= 0 {
 			s.kind = PUNCTUATION
 			return i + 1, data[0 : i+1], nil
