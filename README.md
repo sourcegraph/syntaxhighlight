@@ -12,3 +12,64 @@ Python, Go, and C.
 [![top func](https://sourcegraph.com/api/repos/github.com/sourcegraph/syntaxhighlight/badges/top-func.png)](https://sourcegraph.com/github.com/sourcegraph/syntaxhighlight)
 [![funcs](https://sourcegraph.com/api/repos/github.com/sourcegraph/syntaxhighlight/badges/funcs.png)](https://sourcegraph.com/github.com/sourcegraph/syntaxhighlight)
 [![Total views](https://sourcegraph.com/api/repos/github.com/sourcegraph/syntaxhighlight/counters/views.png)](https://sourcegraph.com/github.com/sourcegraph/syntaxhighlight)
+
+
+## Installation
+
+```
+go get github.com/sourcegraph/syntaxhighlight
+```
+
+
+## Example usage
+
+The function [`AsHTML(src []byte) ([]byte,
+error)`](https://sourcegraph.com/github.com/sourcegraph/syntaxhighlight/symbols/go/github.com/sourcegraph/syntaxhighlight/AsHTML)
+returns an HTML-highlighted version of `src`. The input source code can be in
+any language; the lexer is language independent.
+
+```go
+package syntaxhighlight_test
+
+import (
+	"fmt"
+	"github.com/sourcegraph/syntaxhighlight"
+	"os"
+)
+
+func Example() {
+	src := []byte(`
+/* hello, world! */
+var a = 3;
+
+// b is a cool function
+function b() {
+  return 7;
+}`)
+
+	highlighted, err := syntaxhighlight.AsHTML(src)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	fmt.Println(string(highlighted))
+
+	// output:
+	// <span class="com">/* hello, world! */</span>
+	// <span class="kwd">var</span> <span class="pln">a</span> <span class="pun">=</span> <span class="dec">3</span><span class="pun">;</span>
+	//
+	// <span class="com">// b is a cool function
+	// </span><span class="kwd">function</span> <span class="pln">b</span><span class="pun">()</span> <span class="pun">{</span>
+	//   <span class="kwd">return</span> <span class="dec">7</span><span class="pun">;</span>
+	// <span class="pun">}</span>
+
+}
+```
+
+
+## Contributors
+
+* [Quinn Slack](https://sourcegraph.com/sqs)
+
+Contributions are welcome! Submit a pull request on GitHub.
