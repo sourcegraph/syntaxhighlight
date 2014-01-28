@@ -4,6 +4,9 @@ Package syntaxhighlight provides syntax highlighting for code. It currently uses
 a language-independent lexer and performs decently on JavaScript, Java, Ruby,
 Python, Go, and C.
 
+The main [`AsHTML(src []byte) ([]byte,
+error)`](https://sourcegraph.com/github.com/sourcegraph/syntaxhighlight/symbols/go/github.com/sourcegraph/syntaxhighlight/AsHTML) function outputs HTML that uses the same CSS classes as [google-code-prettify](https://code.google.com/p/google-code-prettify/), so any stylesheets for that should also work with this package.
+
 **[Documentation on Sourcegraph](https://sourcegraph.com/github.com/sourcegraph/syntaxhighlight)**
 
 [![Build Status](https://travis-ci.org/sourcegraph/syntaxhighlight.png?branch=master)](https://travis-ci.org/sourcegraph/syntaxhighlight)
