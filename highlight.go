@@ -216,20 +216,14 @@ func NewScanner(src []byte) *Scanner {
 
 		if isQuot(r) {
 			s.kind = STRING
-			for j := 1; j < len(data); {
-				i := bytes.IndexRune(data[j:], r)
-				if i >= 0 {
-					i += j
-					if i > 0 && data[i-1] == '\\' {
-						j += i
-						continue
-					}
-					return i + 1, data[0 : i+1], nil
-				}
-				if atEOF {
+			for j := 1; j < len(data); j++ {
+				if data[j] == '\\' {
+					j++
+				} else if data[j] == byte(r) {
+					return j + 1, data[0 : j+1], nil
+				} else if atEOF {
 					return len(data), data, nil
 				}
-				return 0, nil, nil
 			}
 			return 0, nil, nil
 		}
