@@ -300,7 +300,7 @@ func NewScanner(src []byte) *Scanner {
 			return 0, nil, nil
 		}
 
-		if i := lastContiguousIndexFunc(data, func(r rune) bool { return !alnum(r) && !unicode.IsSpace(r) && !isQuot(r) }); i >= 0 {
+		if i := bytes.IndexFunc(data, func(r rune) bool { return !alnum(r) && !unicode.IsSpace(r) && !isQuot(r) }); i >= 0 {
 			s.kind = PUNCTUATION
 			return i + 1, data[0 : i+1], nil
 		}
