@@ -10,7 +10,6 @@ import (
 	"io"
 	"text/template"
 	"unicode"
-	"unicode/utf8"
 )
 
 const (
@@ -119,7 +118,7 @@ func (a HTMLAnnotator) Annotate(start int, tok []byte, kind int) (*annotate.Anno
 		left = append(left, []byte(class)...)
 		left = append(left, []byte(`">`)...)
 		return &annotate.Annotation{
-			Start: start, End: start + len(tok),
+			Start: start, End: start + len([]rune(string(tok))),
 			Left: left, Right: []byte("</span>"),
 		}, nil
 	}
@@ -170,7 +169,7 @@ func Annotate(src []byte, a Annotator) ([]*annotate.Annotation, error) {
 		if err != nil {
 			return nil, err
 		}
-		read += len(tok)
+		read += len([]rune(string(tok)))
 		if ann != nil {
 			anns = append(anns, ann)
 		}
@@ -202,16 +201,26 @@ type Scanner struct {
 func NewScanner(src []byte) *Scanner {
 	r := bytes.NewReader(src)
 	s := &Scanner{Scanner: bufio.NewScanner(r)}
-	s.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
-		if atEOF && len(data) == 0 {
+	s.Split(func(byteData []byte, atEOF bool) (advance int, token []byte, err error) {
+		data := []rune(string(byteData))
+		if atEOF && len(byteData) == 0 {
 			return 0, nil, nil
 		}
 
-		r, _ := utf8.DecodeRune(data)
+		//		r, _ := utf8.DecodeRune(data)
+		r := data[0]
+
+		retRunes := func(data []rune) (int, []byte, error) {
+			seg := []byte(string(data))
+			return len(seg), seg, nil
+		}
+
+		retBytes := func() (int, []byte, error) {
+			return len(byteData), byteData, nil
+		}
 
 		isQuot := func(r rune) bool {
-			c := byte(r)
-			return c == '`' || c == '\'' || c == '"'
+			return r == '`' || r == '\'' || r == '"'
 		}
 
 		if isQuot(r) {
@@ -219,10 +228,10 @@ func NewScanner(src []byte) *Scanner {
 			for j := 1; j < len(data); j++ {
 				if data[j] == '\\' {
 					j++
-				} else if data[j] == byte(r) {
-					return j + 1, data[0 : j+1], nil
+				} else if data[j] == r {
+					return retRunes(data[0 : j+1])
 				} else if atEOF {
-					return len(data), data, nil
+					return retBytes()
 				}
 			}
 			return 0, nil, nil
@@ -243,70 +252,70 @@ func NewScanner(src []byte) *Scanner {
 			s.kind = PLAINTEXT
 		}
 		if s.typ || s.name {
-			i := lastContiguousIndexFunc(data, alnum)
+			i := lastContiguousIndexFunc([]byte(string(data)), alnum)
 			if i >= 0 {
 				s.typ, s.name = false, false
 				if _, isKwd := Keywords[string(data[0:i+1])]; isKwd {
 					s.kind = KEYWORD
 				}
-				return i + 1, data[0 : i+1], nil
+				return retRunes(data[0 : i+1])
 			}
 			return 0, nil, nil
 		}
 
 		if unicode.IsDigit(r) {
 			s.kind = DECIMAL
-			i := lastContiguousIndexFunc(data, unicode.IsDigit)
+			i := lastContiguousIndexFunc([]byte(string(data)), unicode.IsDigit)
 			if i >= 0 {
-				return i + 1, data[:i+1], nil
+				return retRunes(data[:i+1])
 			}
 			return 0, nil, nil
 		}
 
 		if unicode.IsSpace(r) {
 			s.kind = WHITESPACE
-			i := lastContiguousIndexFunc(data, unicode.IsSpace)
+			i := lastContiguousIndexFunc([]byte(string(data)), unicode.IsSpace)
 			if i >= 0 {
-				return i + 1, data[:i+1], nil
+				return retRunes(data[:i+1])
 			}
 			if atEOF {
-				return len(data), data, nil
+				return retBytes()
 			}
 			return 0, nil, nil
 		}
 
-		lineComments := [][]byte{[]byte("//"), []byte{'#'}}
+		lineComments := []string{"//", "#"}
 		for _, lc := range lineComments {
-			if i := bytes.Index(data, lc); i == 0 {
+			if i := indexRunes(data, string(lc)); i == 0 {
 				s.kind = COMMENT
-				if i := bytes.IndexByte(data, '\n'); i >= 0 {
-					return i + 1, data[0 : i+1], nil
+				if i := indexRune(data, '\n'); i >= 0 {
+					return retRunes(data[0 : i+1])
 				}
 				if atEOF {
-					return len(data), data, nil
+					return retBytes()
 				}
 				return 0, nil, nil
 			}
 		}
 
-		if i := bytes.Index(data, []byte("/*")); i == 0 {
+		if i := indexRunes(data, "/*"); i == 0 {
 			s.kind = COMMENT
-			if i := bytes.Index(data, []byte("*/")); i >= 0 {
-				return i + 2, data[0 : i+2], nil
+			if i := indexRunes(data, "*/"); i >= 0 {
+				return retRunes(data[0 : i+2])
 			}
 			if atEOF {
-				return len(data), data, nil
+				return retBytes()
 			}
 			return 0, nil, nil
 		}
 
-		if i := bytes.IndexFunc(data, func(r rune) bool { return !alnum(r) && !unicode.IsSpace(r) && !isQuot(r) }); i >= 0 {
+		if i := bytes.IndexFunc([]byte(string(data)), func(r rune) bool { return !alnum(r) && !unicode.IsSpace(r) && !isQuot(r) }); i >= 0 {
 			s.kind = PUNCTUATION
-			return i + 1, data[0 : i+1], nil
+			return retRunes(data[0 : i+1])
 		}
 
 		if atEOF {
-			return len(data), data, nil
+			return retBytes()
 		}
 
 		return 0, nil, nil
@@ -326,4 +335,24 @@ func lastContiguousIndexFunc(s []byte, f func(r rune) bool) int {
 
 func (s *Scanner) Token() ([]byte, int) {
 	return s.Bytes(), s.kind
+}
+
+func indexRune(src []rune, c rune) int {
+	for i, r := range src {
+		if r == c {
+			return i
+		}
+	}
+	return -1
+}
+
+func indexRunes(src []rune, c string) int {
+	l := len(src)
+	w := len([]rune(c))
+	for i := 0; i < l-w; i++ {
+		if string(src[i:i+w]) == c {
+			return i
+		}
+	}
+	return -1
 }
