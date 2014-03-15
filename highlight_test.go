@@ -74,7 +74,8 @@ func TestAnnotate(t *testing.T) {
 	src := []byte(`a:=2`)
 	want := []*annotate.Annotation{
 		{Start: 0, End: 1, Left: []byte(`<span class="pln">`), Right: []byte("</span>")},
-		{Start: 1, End: 3, Left: []byte(`<span class="pun">`), Right: []byte("</span>")},
+		{Start: 1, End: 2, Left: []byte(`<span class="pun">`), Right: []byte("</span>")},
+		{Start: 2, End: 3, Left: []byte(`<span class="pun">`), Right: []byte("</span>")},
 		{Start: 3, End: 4, Left: []byte(`<span class="dec">`), Right: []byte("</span>")},
 	}
 	got, err := Annotate(src, HTMLAnnotator(DefaultHTMLConfig))
