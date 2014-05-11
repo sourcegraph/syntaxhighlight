@@ -3,12 +3,13 @@ package syntaxhighlight
 import (
 	"bytes"
 	"flag"
-	"github.com/sourcegraph/annotate"
 	"io/ioutil"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/sourcegraph/annotate"
 )
 
 var saveExp = flag.Bool("exp", false, "overwrite all expected output files with actual output (returning a failure)")
@@ -27,6 +28,10 @@ func TestAsHTML(t *testing.T) {
 			continue
 		}
 		if strings.HasSuffix(name, ".html") {
+			continue
+		}
+		if name == "net_http_client.go" {
+			// only use this file for benchmarking
 			continue
 		}
 		path := filepath.Join(dir, name)
@@ -87,6 +92,21 @@ func TestAnnotate(t *testing.T) {
 		t.Errorf("want %+v, got %#v", want, got)
 		for _, g := range got {
 			t.Logf("%+v  %q  LEFT=%q RIGHT=%q", g, src[g.Start:g.End], g.Left, g.Right)
+		}
+	}
+}
+
+func BenchmarkAnnotate(b *testing.B) {
+	input, err := ioutil.ReadFile("testdata/net_http_client.go")
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := Annotate(input[:2000], HTMLAnnotator(DefaultHTMLConfig))
+		if err != nil {
+			b.Fatal(err)
 		}
 	}
 }

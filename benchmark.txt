@@ -1,0 +1,3 @@
+PASS
+BenchmarkAnnotate-8	    1000	   2601118 ns/op	  903970 B/op	    6600 allocs/op
+ok  	github.com/sourcegraph/syntaxhighlight	2.851s
