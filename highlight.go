@@ -276,11 +276,7 @@ func NewScanner(src []byte) *Scanner {
 			s.kind = WHITESPACE
 			i := lastContiguousIndexFunc([]byte(string(data)), unicode.IsSpace)
 			if i >= 0 {
-				if i+1 <= len(data) {
-					return retRunes(data[:i+1])
-				} else {
-					return retRunes(data)
-				}
+				return retRunes(data[:i+1])
 			}
 			if atEOF {
 				return retBytes()
