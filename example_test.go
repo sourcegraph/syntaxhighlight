@@ -2,8 +2,9 @@ package syntaxhighlight_test
 
 import (
 	"fmt"
-	"github.com/sourcegraph/syntaxhighlight"
 	"os"
+
+	"github.com/sourcegraph/syntaxhighlight"
 )
 
 func Example() {

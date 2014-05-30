@@ -6,11 +6,12 @@ package syntaxhighlight
 import (
 	"bufio"
 	"bytes"
-	"github.com/sourcegraph/annotate"
 	"io"
 	"text/template"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/sourcegraph/annotate"
 )
 
 const (
