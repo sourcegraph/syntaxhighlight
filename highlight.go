@@ -203,17 +203,26 @@ type Scanner struct {
 func NewScanner(src []byte) *Scanner {
 	r := bytes.NewReader(src)
 	s := &Scanner{Scanner: bufio.NewScanner(r)}
+
+	isQuot := func(r rune) bool {
+		c := byte(r)
+		return c == '`' || c == '\'' || c == '"'
+	}
+	alpha := func(r rune) bool {
+		return byte(r) == '_' || unicode.IsLetter(r)
+	}
+	alnum := func(r rune) bool {
+		return alpha(r) || unicode.IsDigit(r)
+	}
+	lineComments := [][]byte{[]byte("//"), []byte{'#'}}
+	isPunc := func(r rune) bool { return !alnum(r) && !unicode.IsSpace(r) && !isQuot(r) }
+
 	s.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
 		if atEOF && len(data) == 0 {
 			return 0, nil, nil
 		}
 
 		r, _ := utf8.DecodeRune(data)
-
-		isQuot := func(r rune) bool {
-			c := byte(r)
-			return c == '`' || c == '\'' || c == '"'
-		}
 
 		if isQuot(r) {
 			s.kind = STRING
@@ -227,13 +236,6 @@ func NewScanner(src []byte) *Scanner {
 				}
 			}
 			return 0, nil, nil
-		}
-
-		alpha := func(r rune) bool {
-			return byte(r) == '_' || unicode.IsLetter(r)
-		}
-		alnum := func(r rune) bool {
-			return alpha(r) || unicode.IsDigit(r)
 		}
 
 		if unicode.IsUpper(r) {
@@ -276,7 +278,6 @@ func NewScanner(src []byte) *Scanner {
 			return 0, nil, nil
 		}
 
-		lineComments := [][]byte{[]byte("//"), []byte{'#'}}
 		for _, lc := range lineComments {
 			if i := bytes.Index(data, lc); i == 0 {
 				s.kind = COMMENT
@@ -301,7 +302,7 @@ func NewScanner(src []byte) *Scanner {
 			return 0, nil, nil
 		}
 
-		if i := bytes.IndexFunc(data, func(r rune) bool { return !alnum(r) && !unicode.IsSpace(r) && !isQuot(r) }); i >= 0 {
+		if i := bytes.IndexFunc(data, isPunc); i >= 0 {
 			s.kind = PUNCTUATION
 			return i + 1, data[0 : i+1], nil
 		}

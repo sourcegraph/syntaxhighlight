@@ -1,3 +1,3 @@
 PASS
-BenchmarkAnnotate-8	   50000	     60866 ns/op	   19236 B/op	     407 allocs/op
-ok  	github.com/sourcegraph/syntaxhighlight	3.646s
+BenchmarkAnnotate-12	   50000	     56523 ns/op	   18642 B/op	     367 allocs/op
+ok  	github.com/sourcegraph/syntaxhighlight	3.408s
