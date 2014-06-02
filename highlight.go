@@ -173,7 +173,7 @@ func Annotate(src []byte, a Annotator) ([]*annotate.Annotation, error) {
 		if err != nil {
 			return nil, err
 		}
-		read += utf8.RuneCountInString(tokText)
+		read += len(tokText)
 		if ann != nil {
 			anns = append(anns, ann)
 		}
