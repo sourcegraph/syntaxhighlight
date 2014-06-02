@@ -120,7 +120,7 @@ func (a HTMLAnnotator) Annotate(start int, kind int, tokText string) (*annotate.
 		left = append(left, []byte(class)...)
 		left = append(left, []byte(`">`)...)
 		return &annotate.Annotation{
-			Start: start, End: start + utf8.RuneCountInString(tokText),
+			Start: start, End: start + len(tokText),
 			Left: left, Right: []byte("</span>"),
 		}, nil
 	}
