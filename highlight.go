@@ -4,9 +4,9 @@
 package syntaxhighlight
 
 import (
-	"bufio"
 	"bytes"
 	"io"
+	"text/scanner"
 	"text/template"
 	"unicode"
 	"unicode/utf8"
@@ -31,7 +31,7 @@ const (
 )
 
 type Printer interface {
-	Print(w io.Writer, tok []byte, kind int) error
+	Print(w io.Writer, kind int, tokText string) error
 }
 
 type HTMLConfig struct {
@@ -81,7 +81,7 @@ func (c HTMLConfig) class(kind int) string {
 	return ""
 }
 
-func (p HTMLPrinter) Print(w io.Writer, tok []byte, kind int) error {
+func (p HTMLPrinter) Print(w io.Writer, kind int, tokText string) error {
 	class := ((HTMLConfig)(p)).class(kind)
 	if class != "" {
 		_, err := w.Write([]byte(`<span class="`))
@@ -97,7 +97,7 @@ func (p HTMLPrinter) Print(w io.Writer, tok []byte, kind int) error {
 			return err
 		}
 	}
-	template.HTMLEscape(w, tok)
+	template.HTMLEscape(w, []byte(tokText))
 	if class != "" {
 		_, err := w.Write([]byte(`</span>`))
 		if err != nil {
@@ -108,19 +108,19 @@ func (p HTMLPrinter) Print(w io.Writer, tok []byte, kind int) error {
 }
 
 type Annotator interface {
-	Annotate(start int, tok []byte, kind int) (*annotate.Annotation, error)
+	Annotate(start int, kind int, tokText string) (*annotate.Annotation, error)
 }
 
 type HTMLAnnotator HTMLConfig
 
-func (a HTMLAnnotator) Annotate(start int, tok []byte, kind int) (*annotate.Annotation, error) {
+func (a HTMLAnnotator) Annotate(start int, kind int, tokText string) (*annotate.Annotation, error) {
 	class := ((HTMLConfig)(a)).class(kind)
 	if class != "" {
 		left := []byte(`<span class="`)
 		left = append(left, []byte(class)...)
 		left = append(left, []byte(`">`)...)
 		return &annotate.Annotation{
-			Start: start, End: start + len(tok),
+			Start: start, End: start + len(tokText),
 			Left: left, Right: []byte("</span>"),
 		}, nil
 	}
@@ -144,17 +144,16 @@ var DefaultHTMLConfig = HTMLConfig{
 	Decimal:       "dec",
 }
 
-func Print(s *Scanner, w io.Writer, p Printer) error {
-	for s.Scan() {
-		tok, kind := s.Token()
-		err := p.Print(w, tok, kind)
+func Print(s *scanner.Scanner, w io.Writer, p Printer) error {
+	tok := s.Scan()
+	for tok != scanner.EOF {
+		tokText := s.TokenText()
+		err := p.Print(w, tokenKind(tok, tokText), tokText)
 		if err != nil {
 			return err
 		}
-	}
 
-	if err := s.Err(); err != nil {
-		return err
+		tok = s.Scan()
 	}
 
 	return nil
@@ -165,20 +164,21 @@ func Annotate(src []byte, a Annotator) ([]*annotate.Annotation, error) {
 
 	var anns []*annotate.Annotation
 	read := 0
-	for s.Scan() {
-		tok, kind := s.Token()
-		ann, err := a.Annotate(read, tok, kind)
+
+	tok := s.Scan()
+	for tok != scanner.EOF {
+		tokText := s.TokenText()
+
+		ann, err := a.Annotate(read, tokenKind(tok, tokText), tokText)
 		if err != nil {
 			return nil, err
 		}
-		read += len(tok)
+		read += len(tokText)
 		if ann != nil {
 			anns = append(anns, ann)
 		}
-	}
 
-	if err := s.Err(); err != nil {
-		return nil, err
+		tok = s.Scan()
 	}
 
 	return anns, nil
@@ -193,139 +193,34 @@ func AsHTML(src []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-type Scanner struct {
-	*bufio.Scanner
-	kind int
-	typ  bool
-	name bool
+func NewScanner(src []byte) *scanner.Scanner {
+	var s scanner.Scanner
+	s.Init(bytes.NewReader(src))
+	s.Error = func(_ *scanner.Scanner, _ string) {}
+	s.Whitespace = 0
+	s.Mode = s.Mode ^ scanner.SkipComments
+	return &s
 }
 
-func NewScanner(src []byte) *Scanner {
-	r := bytes.NewReader(src)
-	s := &Scanner{Scanner: bufio.NewScanner(r)}
-
-	isQuot := func(r rune) bool {
-		c := byte(r)
-		return c == '`' || c == '\'' || c == '"'
+func tokenKind(tok rune, tokText string) int {
+	switch tok {
+	case scanner.Ident:
+		if _, isKW := Keywords[tokText]; isKW {
+			return KEYWORD
+		}
+		if r, _ := utf8.DecodeRuneInString(tokText); unicode.IsUpper(r) {
+			return TYPE
+		}
+		return PLAINTEXT
+	case scanner.Float, scanner.Int:
+		return DECIMAL
+	case scanner.Char, scanner.String, scanner.RawString:
+		return STRING
+	case scanner.Comment:
+		return COMMENT
 	}
-	alpha := func(r rune) bool {
-		return byte(r) == '_' || unicode.IsLetter(r)
+	if unicode.IsSpace(tok) {
+		return WHITESPACE
 	}
-	alnum := func(r rune) bool {
-		return alpha(r) || unicode.IsDigit(r)
-	}
-	lineComments := [][]byte{[]byte("//"), []byte{'#'}}
-	isPunc := func(r rune) bool { return !alnum(r) && !unicode.IsSpace(r) && !isQuot(r) }
-
-	s.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
-		if atEOF && len(data) == 0 {
-			return 0, nil, nil
-		}
-
-		r, _ := utf8.DecodeRune(data)
-
-		if isQuot(r) {
-			s.kind = STRING
-			for j := 1; j < len(data); j++ {
-				if data[j] == '\\' {
-					j++
-				} else if data[j] == byte(r) {
-					return j + 1, data[0 : j+1], nil
-				} else if atEOF {
-					return len(data), data, nil
-				}
-			}
-			return 0, nil, nil
-		}
-
-		if unicode.IsUpper(r) {
-			s.typ = true
-			s.kind = TYPE
-		} else if alpha(r) {
-			s.name = true
-			s.kind = PLAINTEXT
-		}
-		if s.typ || s.name {
-			i := lastContiguousIndexFunc(data, alnum)
-			if i >= 0 {
-				s.typ, s.name = false, false
-				if _, isKwd := Keywords[string(data[0:i+1])]; isKwd {
-					s.kind = KEYWORD
-				}
-				return i + 1, data[0 : i+1], nil
-			}
-			return 0, nil, nil
-		}
-
-		if unicode.IsDigit(r) {
-			s.kind = DECIMAL
-			i := lastContiguousIndexFunc(data, unicode.IsDigit)
-			if i >= 0 {
-				return i + 1, data[:i+1], nil
-			}
-			return 0, nil, nil
-		}
-
-		if unicode.IsSpace(r) {
-			s.kind = WHITESPACE
-			i := lastContiguousIndexFunc(data, unicode.IsSpace)
-			if i >= 0 {
-				return i + 1, data[:i+1], nil
-			}
-			if atEOF {
-				return len(data), data, nil
-			}
-			return 0, nil, nil
-		}
-
-		for _, lc := range lineComments {
-			if i := bytes.Index(data, lc); i == 0 {
-				s.kind = COMMENT
-				if i := bytes.IndexByte(data, '\n'); i >= 0 {
-					return i + 1, data[0 : i+1], nil
-				}
-				if atEOF {
-					return len(data), data, nil
-				}
-				return 0, nil, nil
-			}
-		}
-
-		if i := bytes.Index(data, []byte("/*")); i == 0 {
-			s.kind = COMMENT
-			if i := bytes.Index(data, []byte("*/")); i >= 0 {
-				return i + 2, data[0 : i+2], nil
-			}
-			if atEOF {
-				return len(data), data, nil
-			}
-			return 0, nil, nil
-		}
-
-		if i := bytes.IndexFunc(data, isPunc); i >= 0 {
-			s.kind = PUNCTUATION
-			return i + 1, data[0 : i+1], nil
-		}
-
-		if atEOF {
-			return len(data), data, nil
-		}
-
-		return 0, nil, nil
-	})
-	return s
-}
-
-func lastContiguousIndexFunc(s []byte, f func(r rune) bool) int {
-	i := bytes.IndexFunc(s, func(r rune) bool {
-		return !f(r)
-	})
-	if i == -1 {
-		i = len(s)
-	}
-	return i - 1
-}
-
-func (s *Scanner) Token() ([]byte, int) {
-	return s.Bytes(), s.kind
+	return PUNCTUATION
 }

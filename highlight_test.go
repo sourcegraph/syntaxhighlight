@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/kr/pretty"
 	"github.com/sourcegraph/annotate"
 )
 
@@ -65,7 +66,7 @@ func TestAsHTML(t *testing.T) {
 		got = bytes.TrimSpace(got)
 
 		if !bytes.Equal(want, got) {
-			t.Errorf("%s: want %q, got %q", name, want, got)
+			t.Errorf("%s:\nwant ==========\n%q\ngot ===========\n%q", name, want, got)
 			continue
 		}
 	}
@@ -89,7 +90,7 @@ func TestAnnotate(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(want, got) {
-		t.Errorf("want %+v, got %#v", want, got)
+		t.Errorf("want %# v, got %# v\n\ndiff:\n%v", pretty.Formatter(want), pretty.Formatter(got), strings.Join(pretty.Diff(got, want), "\n"))
 		for _, g := range got {
 			t.Logf("%+v  %q  LEFT=%q RIGHT=%q", g, src[g.Start:g.End], g.Left, g.Right)
 		}
