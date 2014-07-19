@@ -1,4 +1,7 @@
 // +build ignore
 package foo_bar
 
-for _, a := range foo {}
+func foo() {
+	for _, a := range foo {
+	}
+}
