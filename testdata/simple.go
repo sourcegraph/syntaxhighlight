@@ -1,3 +1,4 @@
+// +build ignore
 package foo
 
 func Bar(baz string, qux *Zip) (*Zap, Zop) {

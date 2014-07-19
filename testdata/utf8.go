@@ -1,3 +1,4 @@
+// +build ignore
 package utf8
 
 import "fmt"
