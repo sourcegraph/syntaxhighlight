@@ -159,10 +159,10 @@ func Print(s *scanner.Scanner, w io.Writer, p Printer) error {
 	return nil
 }
 
-func Annotate(src []byte, a Annotator) ([]*annotate.Annotation, error) {
+func Annotate(src []byte, a Annotator) (annotate.Annotations, error) {
 	s := NewScanner(src)
 
-	var anns []*annotate.Annotation
+	var anns annotate.Annotations
 	read := 0
 
 	tok := s.Scan()
