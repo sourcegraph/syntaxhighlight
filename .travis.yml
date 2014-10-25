@@ -1,6 +1,8 @@
 language: go
 go:
   - 1.3
+install:
+  - go get -d -t -v ./...
 script:
   - diff -u <(echo -n) <(gofmt -d ./)
   - go test -v -bench=. -benchmem
