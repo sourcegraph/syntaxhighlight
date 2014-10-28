@@ -1,4 +1,5 @@
 // +build ignore
+
 package foo_bar
 
 func foo() {
