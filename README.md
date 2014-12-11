@@ -36,8 +36,9 @@ package syntaxhighlight_test
 
 import (
 	"fmt"
-	"github.com/sourcegraph/syntaxhighlight"
 	"os"
+
+	"github.com/sourcegraph/syntaxhighlight"
 )
 
 func Example() {
@@ -58,15 +59,14 @@ function b() {
 
 	fmt.Println(string(highlighted))
 
-	// output:
+	// Output:
 	// <span class="com">/* hello, world! */</span>
 	// <span class="kwd">var</span> <span class="pln">a</span> <span class="pun">=</span> <span class="dec">3</span><span class="pun">;</span>
 	//
-	// <span class="com">// b is a cool function
-	// </span><span class="kwd">function</span> <span class="pln">b</span><span class="pun">()</span> <span class="pun">{</span>
+	// <span class="com">// b is a cool function</span>
+	// <span class="kwd">function</span> <span class="pln">b</span><span class="pun">(</span><span class="pun">)</span> <span class="pun">{</span>
 	//   <span class="kwd">return</span> <span class="dec">7</span><span class="pun">;</span>
 	// <span class="pun">}</span>
-
 }
 ```
 
