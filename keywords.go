@@ -1,6 +1,6 @@
 package syntaxhighlight
 
-var Keywords = map[string]struct{}{
+var keywords = map[string]struct{}{
 	"BEGIN":            struct{}{},
 	"END":              struct{}{},
 	"False":            struct{}{},
