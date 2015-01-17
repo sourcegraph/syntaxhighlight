@@ -34,6 +34,8 @@ const (
 	Decimal
 )
 
+//go:generate gostringer -type=Kind
+
 type Printer interface {
 	Print(w io.Writer, kind Kind, tokText string) error
 }
