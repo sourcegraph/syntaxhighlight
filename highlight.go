@@ -14,30 +14,24 @@ import (
 	"github.com/sourcegraph/annotate"
 )
 
-// Kind represents a syntax highlighting kind (class) which will be assigned to tokens.
-// A syntax highlighting scheme (style) maps text style properties to each token kind.
-type Kind uint8
-
 const (
-	Whitespace Kind = iota
-	String
-	Keyword
-	Comment
-	Type
-	Literal
-	Punctuation
-	Plaintext
-	Tag
-	HTMLTag
-	HTMLAttrName
-	HTMLAttrValue
-	Decimal
+	WHITESPACE = iota
+	STRING
+	KEYWORD
+	COMMENT
+	TYPE
+	LITERAL
+	PUNCTUATION
+	PLAINTEXT
+	TAG
+	HTMLTAG
+	HTMLATTRNAME
+	HTMLATTRVALUE
+	DECIMAL
 )
 
-//go:generate gostringer -type=Kind
-
 type Printer interface {
-	Print(w io.Writer, kind Kind, tokText string) error
+	Print(w io.Writer, kind int, tokText string) error
 }
 
 type HTMLConfig struct {
@@ -57,37 +51,37 @@ type HTMLConfig struct {
 
 type HTMLPrinter HTMLConfig
 
-func (c HTMLConfig) class(kind Kind) string {
+func (c HTMLConfig) class(kind int) string {
 	switch kind {
-	case String:
+	case STRING:
 		return c.String
-	case Keyword:
+	case KEYWORD:
 		return c.Keyword
-	case Comment:
+	case COMMENT:
 		return c.Comment
-	case Type:
+	case TYPE:
 		return c.Type
-	case Literal:
+	case LITERAL:
 		return c.Literal
-	case Punctuation:
+	case PUNCTUATION:
 		return c.Punctuation
-	case Plaintext:
+	case PLAINTEXT:
 		return c.Plaintext
-	case Tag:
+	case TAG:
 		return c.Tag
-	case HTMLTag:
+	case HTMLTAG:
 		return c.HTMLTag
-	case HTMLAttrName:
+	case HTMLATTRNAME:
 		return c.HTMLAttrName
-	case HTMLAttrValue:
+	case HTMLATTRVALUE:
 		return c.HTMLAttrValue
-	case Decimal:
+	case DECIMAL:
 		return c.Decimal
 	}
 	return ""
 }
 
-func (p HTMLPrinter) Print(w io.Writer, kind Kind, tokText string) error {
+func (p HTMLPrinter) Print(w io.Writer, kind int, tokText string) error {
 	class := ((HTMLConfig)(p)).class(kind)
 	if class != "" {
 		_, err := w.Write([]byte(`<span class="`))
@@ -114,12 +108,12 @@ func (p HTMLPrinter) Print(w io.Writer, kind Kind, tokText string) error {
 }
 
 type Annotator interface {
-	Annotate(start int, kind Kind, tokText string) (*annotate.Annotation, error)
+	Annotate(start int, kind int, tokText string) (*annotate.Annotation, error)
 }
 
 type HTMLAnnotator HTMLConfig
 
-func (a HTMLAnnotator) Annotate(start int, kind Kind, tokText string) (*annotate.Annotation, error) {
+func (a HTMLAnnotator) Annotate(start int, kind int, tokText string) (*annotate.Annotation, error) {
 	class := ((HTMLConfig)(a)).class(kind)
 	if class != "" {
 		left := []byte(`<span class="`)
@@ -133,8 +127,8 @@ func (a HTMLAnnotator) Annotate(start int, kind Kind, tokText string) (*annotate
 	return nil, nil
 }
 
-// DefaultHTMLConfig's class names match those of google-code-prettify
-// (https://code.google.com/p/google-code-prettify/).
+// DefaultHTMLConfig's class names match those of
+// [google-code-prettify](https://code.google.com/p/google-code-prettify/).
 var DefaultHTMLConfig = HTMLConfig{
 	String:        "str",
 	Keyword:       "kwd",
@@ -208,25 +202,25 @@ func NewScanner(src []byte) *scanner.Scanner {
 	return &s
 }
 
-func tokenKind(tok rune, tokText string) Kind {
+func tokenKind(tok rune, tokText string) int {
 	switch tok {
 	case scanner.Ident:
-		if _, isKW := keywords[tokText]; isKW {
-			return Keyword
+		if _, isKW := Keywords[tokText]; isKW {
+			return KEYWORD
 		}
 		if r, _ := utf8.DecodeRuneInString(tokText); unicode.IsUpper(r) {
-			return Type
+			return TYPE
 		}
-		return Plaintext
+		return PLAINTEXT
 	case scanner.Float, scanner.Int:
-		return Decimal
+		return DECIMAL
 	case scanner.Char, scanner.String, scanner.RawString:
-		return String
+		return STRING
 	case scanner.Comment:
-		return Comment
+		return COMMENT
 	}
 	if unicode.IsSpace(tok) {
-		return Whitespace
+		return WHITESPACE
 	}
-	return Punctuation
+	return PUNCTUATION
 }
