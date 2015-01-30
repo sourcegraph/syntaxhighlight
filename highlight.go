@@ -145,28 +145,28 @@ func (a *NilAnnotator) Annotate(start, kind int, tokText string) (*annotate.Anno
 		return nil, nil
 	}
 
-	var token interface{}
-	class := ((HTMLConfig)(a.Config)).class(kind)
-
 	line := a.Code.Lines[len(a.Code.Lines)-1]
 	if a.isNewLine {
 		line.Tokens = make([]interface{}, 0, 1)
 	}
 
-	if len(class) == 0 {
-		// We add whitespace as a string token.
-		token = tokText
-		if !a.isNewLine {
+	class := ((HTMLConfig)(a.Config)).class(kind)
+	switch {
+	case len(class) == 0:
+		if a.isNewLine {
+			line.Tokens = append(line.Tokens, &tokText)
+		} else {
 			// If this token and the one preceding it are both whitespace, they can be
 			// merged into one.
 			if lastToken, ok := (line.Tokens[len(line.Tokens)-1]).(string); ok {
 				line.Tokens[len(line.Tokens)-1] = lastToken + tokText
+			} else {
+				line.Tokens = append(line.Tokens, &tokText)
 			}
-		} else {
-			line.Tokens = append(line.Tokens, &token)
 		}
-	} else {
-		token = sourcegraph.SourceCodeToken{
+
+	default:
+		token := sourcegraph.SourceCodeToken{
 			StartByte: start,
 			EndByte:   start + len(tokText),
 			Class:     class,
