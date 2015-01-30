@@ -159,7 +159,7 @@ func (a *NilAnnotator) Annotate(start, kind int, tokText string) (*annotate.Anno
 			// If this token and the one preceding it are both whitespace, they can be
 			// merged into one.
 			if lastToken, ok := (line.Tokens[len(line.Tokens)-1]).(string); ok {
-				line.Tokens[len(line.Tokens)-1] = lastToken + tokText
+				line.Tokens[len(line.Tokens)-1] = string(lastToken + tokText)
 			} else {
 				line.Tokens = append(line.Tokens, &tokText)
 			}
