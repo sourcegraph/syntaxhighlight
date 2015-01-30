@@ -11,6 +11,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"sourcegraph.com/sourcegraph/go-sourcegraph/sourcegraph"
+
 	"github.com/sourcegraph/annotate"
 )
 
@@ -109,6 +111,61 @@ func (p HTMLPrinter) Print(w io.Writer, kind int, tokText string) error {
 
 type Annotator interface {
 	Annotate(start int, kind int, tokText string) (*annotate.Annotation, error)
+}
+
+// NilAnnotator is a special kind of annotator that always returns nil, but stores
+// within itself the snippet of source code that is passed through it as tokens.
+type NilAnnotator struct {
+	Config    HTMLConfig
+	Code      *sourcegraph.SourceCode
+	LineCount int
+
+	isFirstLine bool
+	isNewLine   bool
+}
+
+func (a *NilAnnotator) Annotate(start, kind int, tokText string) (*annotate.Annotation, error) {
+	if a.Code.Lines == nil {
+		a.isFirstLine, a.isNewLine = true, true
+		a.Code.Lines = make([]*sourcegraph.SourceCodeLine, 0, a.LineCount)
+	}
+
+	if a.isNewLine {
+		if !a.isFirstLine {
+			line := a.Code.Lines[len(a.Code.Lines)-1]
+			line.EndByte = start - 1
+		}
+		a.Code.Lines = append(a.Code.Lines, &sourcegraph.SourceCodeLine{StartByte: start})
+	}
+
+	if tokText == "\n" {
+		a.isFirstLine, a.isNewLine = false, true
+		return nil, nil
+	}
+
+	var token interface{}
+	class := ((HTMLConfig)(a.Config)).class(kind)
+
+	// Whitespace
+	if len(class) == 0 {
+		token = tokText
+	} else {
+		token = sourcegraph.SourceCodeToken{
+			StartByte: start,
+			EndByte:   start + len(tokText),
+			Class:     class,
+			Label:     tokText,
+		}
+	}
+
+	line := a.Code.Lines[len(a.Code.Lines)-1]
+	if a.isNewLine {
+		line.Tokens = make([]interface{}, 0, 1)
+	}
+	line.Tokens = append(line.Tokens, &token)
+
+	a.isNewLine = false
+	return nil, nil
 }
 
 type HTMLAnnotator HTMLConfig
