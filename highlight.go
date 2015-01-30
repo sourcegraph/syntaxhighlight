@@ -133,11 +133,11 @@ func (a *NilAnnotator) Annotate(start, kind int, tokText string) (*annotate.Anno
 	}
 
 	if a.isNewLine {
+		a.Code.Lines = append(a.Code.Lines, &sourcegraph.SourceCodeLine{StartByte: start})
 		if !a.isFirstLine {
 			lastLine := a.Code.Lines[len(a.Code.Lines)-1]
 			lastLine.EndByte = start - 1
 		}
-		a.Code.Lines = append(a.Code.Lines, &sourcegraph.SourceCodeLine{StartByte: start})
 	}
 
 	if tokText == "\n" {
@@ -148,9 +148,23 @@ func (a *NilAnnotator) Annotate(start, kind int, tokText string) (*annotate.Anno
 	var token interface{}
 	class := ((HTMLConfig)(a.Config)).class(kind)
 
-	// Whitespace
+	line := a.Code.Lines[len(a.Code.Lines)-1]
+	if a.isNewLine {
+		line.Tokens = make([]interface{}, 0, 1)
+	}
+
 	if len(class) == 0 {
+		// We add whitespace as a string token.
 		token = tokText
+		if !a.isNewLine {
+			// If this token and the one preceding it are both whitespace, they can be
+			// merged into one.
+			if lastToken, ok := (line.Tokens[len(line.Tokens)-2]).(string); ok {
+				lastToken = lastToken + tokText
+			}
+		} else {
+			line.Tokens = append(line.Tokens, &token)
+		}
 	} else {
 		token = sourcegraph.SourceCodeToken{
 			StartByte: start,
@@ -158,13 +172,8 @@ func (a *NilAnnotator) Annotate(start, kind int, tokText string) (*annotate.Anno
 			Class:     class,
 			Label:     tokText,
 		}
+		line.Tokens = append(line.Tokens, &token)
 	}
-
-	line := a.Code.Lines[len(a.Code.Lines)-1]
-	if a.isNewLine {
-		line.Tokens = make([]interface{}, 0, 1)
-	}
-	line.Tokens = append(line.Tokens, &token)
 
 	a.isNewLine = false
 	return nil, nil
