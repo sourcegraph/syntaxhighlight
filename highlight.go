@@ -135,7 +135,7 @@ func (a *NilAnnotator) Annotate(start, kind int, tokText string) (*annotate.Anno
 	if a.isNewLine {
 		a.Code.Lines = append(a.Code.Lines, &sourcegraph.SourceCodeLine{StartByte: start})
 		if !a.isFirstLine {
-			lastLine := a.Code.Lines[len(a.Code.Lines)-1]
+			lastLine := a.Code.Lines[len(a.Code.Lines)-2]
 			lastLine.EndByte = start - 1
 		}
 	}
