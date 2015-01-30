@@ -125,15 +125,17 @@ type NilAnnotator struct {
 }
 
 func (a *NilAnnotator) Annotate(start, kind int, tokText string) (*annotate.Annotation, error) {
-	if a.Code.Lines == nil {
+	if a.Code == nil {
+		a.Code = &sourcegraph.SourceCode{
+			Lines: make([]*sourcegraph.SourceCodeLine, 0, a.LineCount),
+		}
 		a.isFirstLine, a.isNewLine = true, true
-		a.Code.Lines = make([]*sourcegraph.SourceCodeLine, 0, a.LineCount)
 	}
 
 	if a.isNewLine {
 		if !a.isFirstLine {
-			line := a.Code.Lines[len(a.Code.Lines)-1]
-			line.EndByte = start - 1
+			lastLine := a.Code.Lines[len(a.Code.Lines)-1]
+			lastLine.EndByte = start - 1
 		}
 		a.Code.Lines = append(a.Code.Lines, &sourcegraph.SourceCodeLine{StartByte: start})
 	}
