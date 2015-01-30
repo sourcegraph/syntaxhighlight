@@ -169,8 +169,8 @@ func (a *NilAnnotator) Annotate(start, kind int, tokText string) (*annotate.Anno
 
 	default:
 		token := sourcegraph.SourceCodeToken{
-			StartByte: start,
-			EndByte:   start + len(tokText),
+			StartByte: a.StartByte + start,
+			EndByte:   a.StartByte + start + len(tokText),
 			Class:     class,
 			Label:     tokText,
 		}
