@@ -5,6 +5,7 @@ package syntaxhighlight
 
 import (
 	"bytes"
+	"html"
 	"io"
 	"text/scanner"
 	"text/template"
@@ -152,17 +153,18 @@ func (a *NilAnnotator) Annotate(start, kind int, tokText string) (*annotate.Anno
 	}
 
 	class := ((HTMLConfig)(a.Config)).class(kind)
+	txt := html.EscapeString(tokText)
 	switch {
 	case class == "":
 		if a.isNewLine {
-			line.Tokens = append(line.Tokens, tokText)
+			line.Tokens = append(line.Tokens, txt)
 		} else {
 			// If this token and the one preceding it are both whitespace, they can be
 			// merged into one.
 			if lastToken, ok := (line.Tokens[len(line.Tokens)-1]).(string); ok {
-				line.Tokens[len(line.Tokens)-1] = string(lastToken + tokText)
+				line.Tokens[len(line.Tokens)-1] = string(lastToken + txt)
 			} else {
-				line.Tokens = append(line.Tokens, tokText)
+				line.Tokens = append(line.Tokens, txt)
 			}
 		}
 
@@ -171,7 +173,7 @@ func (a *NilAnnotator) Annotate(start, kind int, tokText string) (*annotate.Anno
 			StartByte: start,
 			EndByte:   start + len(tokText),
 			Class:     class,
-			Label:     tokText,
+			Label:     txt,
 		}
 		line.Tokens = append(line.Tokens, &token)
 	}
