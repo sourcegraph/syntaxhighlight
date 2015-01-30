@@ -152,16 +152,16 @@ func (a *NilAnnotator) Annotate(start, kind int, tokText string) (*annotate.Anno
 
 	class := ((HTMLConfig)(a.Config)).class(kind)
 	switch {
-	case len(class) == 0:
+	case class == "":
 		if a.isNewLine {
-			line.Tokens = append(line.Tokens, &tokText)
+			line.Tokens = append(line.Tokens, tokText)
 		} else {
 			// If this token and the one preceding it are both whitespace, they can be
 			// merged into one.
 			if lastToken, ok := (line.Tokens[len(line.Tokens)-1]).(string); ok {
 				line.Tokens[len(line.Tokens)-1] = string(lastToken + tokText)
 			} else {
-				line.Tokens = append(line.Tokens, &tokText)
+				line.Tokens = append(line.Tokens, tokText)
 			}
 		}
 
