@@ -116,10 +116,9 @@ type Annotator interface {
 // NilAnnotator is a special kind of annotator that always returns nil, but stores
 // within itself the snippet of source code that is passed through it as tokens.
 type NilAnnotator struct {
-	Config             HTMLConfig
-	Code               *sourcegraph.SourceCode
-	LineCount          int
-	StartByte, EndByte int
+	Config    HTMLConfig
+	Code      *sourcegraph.SourceCode
+	LineCount int
 
 	isFirstLine bool
 	isNewLine   bool
@@ -169,8 +168,8 @@ func (a *NilAnnotator) Annotate(start, kind int, tokText string) (*annotate.Anno
 
 	default:
 		token := sourcegraph.SourceCodeToken{
-			StartByte: a.StartByte + start,
-			EndByte:   a.StartByte + start + len(tokText),
+			StartByte: start,
+			EndByte:   start + len(tokText),
 			Class:     class,
 			Label:     tokText,
 		}
