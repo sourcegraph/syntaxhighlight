@@ -12,6 +12,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"strings"
+
 	"sourcegraph.com/sourcegraph/go-sourcegraph/sourcegraph"
 
 	"github.com/sourcegraph/annotate"
@@ -120,65 +122,90 @@ type NilAnnotator struct {
 	Config    HTMLConfig
 	Code      *sourcegraph.SourceCode
 	LineCount int
-
-	isFirstLine bool
-	isNewLine   bool
 }
 
-func (a *NilAnnotator) Annotate(start, kind int, tokText string) (*annotate.Annotation, error) {
-	if a.Code == nil {
-		a.Code = &sourcegraph.SourceCode{
-			Lines: make([]*sourcegraph.SourceCodeLine, 0, a.LineCount),
-		}
-		a.isFirstLine, a.isNewLine = true, true
+func NewNilAnnotator(lineCount int) *NilAnnotator {
+	ann := &NilAnnotator{
+		Config: DefaultHTMLConfig,
+		Code: &sourcegraph.SourceCode{
+			Lines: make([]*sourcegraph.SourceCodeLine, 0, lineCount),
+		},
 	}
+	ann.addLine(0)
+	return ann
+}
 
-	// Open a new line and close the previous one.
-	if a.isNewLine {
-		a.Code.Lines = append(a.Code.Lines, &sourcegraph.SourceCodeLine{StartByte: start})
-		if !a.isFirstLine {
-			lastLine := a.Code.Lines[len(a.Code.Lines)-2]
-			lastLine.EndByte = start - 1
-		}
-	}
-
-	if tokText == "\n" {
-		a.isFirstLine, a.isNewLine = false, true
-		return nil, nil
-	}
-
+func (a *NilAnnotator) addToken(t interface{}) {
 	line := a.Code.Lines[len(a.Code.Lines)-1]
-	if a.isNewLine {
+	if line.Tokens == nil {
 		line.Tokens = make([]interface{}, 0, 1)
 	}
+	// If this token and the previous one are both strings, merge them.
+	if token, ok := t.(string); ok && len(line.Tokens) > 0 {
+		if lastToken, ok := (line.Tokens[len(line.Tokens)-1]).(string); ok {
+			line.Tokens[len(line.Tokens)-1] = string(lastToken + token)
+			return
+		}
+	}
+	line.Tokens = append(line.Tokens, t)
+}
 
+func (a *NilAnnotator) addLine(startByte int) {
+	a.Code.Lines = append(a.Code.Lines, &sourcegraph.SourceCodeLine{StartByte: startByte})
+	if len(a.Code.Lines) > 1 {
+		lastLine := a.Code.Lines[len(a.Code.Lines)-2]
+		lastLine.EndByte = startByte - 1
+	}
+}
+
+func (a *NilAnnotator) addMultilineComment(startByte int, text string) {
+	lines := strings.Split(text, "\n")
+	for n, text := range lines {
+		if len(text) > 0 {
+			a.addToken(&sourcegraph.SourceCodeToken{
+				StartByte: startByte,
+				EndByte:   startByte + len(text),
+				Class:     "com",
+				Label:     text,
+			})
+			startByte += len(text)
+		}
+		if n < len(lines)-1 {
+			a.addLine(startByte)
+		}
+	}
+}
+
+func (a *NilAnnotator) isNewLineChar(text string) bool { return text == "\n" }
+func (a *NilAnnotator) isMultiline(text string) bool   { return strings.Contains(text, "\n") }
+
+func (a *NilAnnotator) Annotate(start, kind int, tokText string) (*annotate.Annotation, error) {
 	class := ((HTMLConfig)(a.Config)).class(kind)
 	txt := html.EscapeString(tokText)
-	switch {
-	case class == "":
-		if a.isNewLine {
-			line.Tokens = append(line.Tokens, txt)
-		} else {
-			// If this token and the one preceding it are both whitespace, they can be
-			// merged into one.
-			if lastToken, ok := (line.Tokens[len(line.Tokens)-1]).(string); ok {
-				line.Tokens[len(line.Tokens)-1] = string(lastToken + txt)
-			} else {
-				line.Tokens = append(line.Tokens, txt)
-			}
-		}
 
+	switch {
+	// New line char
+	case a.isNewLineChar(tokText):
+		a.addLine(start + 1)
+
+	// Whitespace
+	case class == "":
+		a.addToken(txt)
+
+	// Multiline comment
+	case class == "com" && a.isMultiline(tokText):
+		a.addMultilineComment(start+1, tokText)
+
+	// Token
 	default:
-		token := sourcegraph.SourceCodeToken{
+		a.addToken(&sourcegraph.SourceCodeToken{
 			StartByte: start,
 			EndByte:   start + len(tokText),
 			Class:     class,
 			Label:     txt,
-		}
-		line.Tokens = append(line.Tokens, &token)
+		})
 	}
 
-	a.isNewLine = false
 	return nil, nil
 }
 
