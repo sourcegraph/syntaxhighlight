@@ -117,9 +117,8 @@ type Annotator interface {
 // NilAnnotator is a special kind of annotator that always returns nil, but stores
 // within itself the snippet of source code that is passed through it as tokens.
 type NilAnnotator struct {
-	Config    HTMLConfig
-	Code      *sourcegraph.SourceCode
-	LineCount int
+	Config HTMLConfig
+	Code   *sourcegraph.SourceCode
 }
 
 func NewNilAnnotator(lineCount int) *NilAnnotator {
@@ -176,16 +175,13 @@ func (a *NilAnnotator) addMultilineComment(startByte int, text string) {
 	}
 }
 
-func (a *NilAnnotator) isNewLineChar(text string) bool { return text == "\n" }
-func (a *NilAnnotator) isMultiline(text string) bool   { return strings.Contains(text, "\n") }
-
 func (a *NilAnnotator) Annotate(start, kind int, tokText string) (*annotate.Annotation, error) {
 	class := ((HTMLConfig)(a.Config)).class(kind)
 	txt := html.EscapeString(tokText)
 
 	switch {
 	// New line char
-	case a.isNewLineChar(tokText):
+	case tokText == "\n":
 		a.addLine(start + 1)
 
 	// Whitespace
@@ -193,7 +189,7 @@ func (a *NilAnnotator) Annotate(start, kind int, tokText string) (*annotate.Anno
 		a.addToken(txt)
 
 	// Multiline comment
-	case class == "com" && a.isMultiline(tokText):
+	case class == "com" && strings.Contains(tokText, "\n"):
 		a.addMultilineComment(start+1, tokText)
 
 	// Token
