@@ -129,6 +129,7 @@ func NewNilAnnotator(lineCount int) *NilAnnotator {
 			Lines: make([]*sourcegraph.SourceCodeLine, 0, lineCount),
 		},
 	}
+	//TODO(gbbr): allow start byte offset here, instead of always 0
 	ann.addLine(0)
 	return ann
 }
@@ -139,9 +140,10 @@ func (a *NilAnnotator) addToken(t interface{}) {
 		line.Tokens = make([]interface{}, 0, 1)
 	}
 	// If this token and the previous one are both strings, merge them.
-	if token, ok := t.(string); ok && len(line.Tokens) > 0 {
-		if lastToken, ok := (line.Tokens[len(line.Tokens)-1]).(string); ok {
-			line.Tokens[len(line.Tokens)-1] = string(lastToken + token)
+	n := len(line.Tokens)
+	if t1, ok := t.(string); ok && n > 0 {
+		if t2, ok := (line.Tokens[n-1]).(string); ok {
+			line.Tokens[n-1] = string(t1 + t2)
 			return
 		}
 	}
