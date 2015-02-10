@@ -15,6 +15,7 @@ import (
 
 	"github.com/sourcegraph/annotate"
 	"sourcegraph.com/sourcegraph/go-sourcegraph/sourcegraph"
+	"sourcegraph.com/sourcegraph/vcsstore/vcsclient"
 )
 
 const (
@@ -117,20 +118,21 @@ type Annotator interface {
 // NilAnnotator is a special kind of annotator that always returns nil, but stores
 // within itself the snippet of source code that is passed through it as tokens.
 type NilAnnotator struct {
-	Config HTMLConfig
-	Code   *sourcegraph.SourceCode
+	Config     HTMLConfig
+	Code       *sourcegraph.SourceCode
+	byteOffset int
 }
 
-func NewNilAnnotator(lineCount int) *NilAnnotator {
-	ann := &NilAnnotator{
+func NewNilAnnotator(e *vcsclient.FileWithRange) *NilAnnotator {
+	ann := NilAnnotator{
 		Config: DefaultHTMLConfig,
 		Code: &sourcegraph.SourceCode{
-			Lines: make([]*sourcegraph.SourceCodeLine, 0, lineCount),
+			Lines: make([]*sourcegraph.SourceCodeLine, 0, bytes.Count(e.Contents, []byte("\n"))),
 		},
+		byteOffset: e.StartByte,
 	}
-	//TODO(gbbr): allow start byte offset here, instead of always 0
-	ann.addLine(0)
-	return ann
+	ann.addLine(ann.byteOffset)
+	return &ann
 }
 
 func (a *NilAnnotator) addToken(t interface{}) {
@@ -178,6 +180,7 @@ func (a *NilAnnotator) addMultilineComment(startByte int, text string) {
 func (a *NilAnnotator) Annotate(start, kind int, tokText string) (*annotate.Annotation, error) {
 	class := ((HTMLConfig)(a.Config)).class(kind)
 	txt := html.EscapeString(tokText)
+	start += a.byteOffset
 
 	switch {
 	// New line char
