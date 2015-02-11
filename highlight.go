@@ -117,6 +117,10 @@ type Annotator interface {
 
 // NilAnnotator is a special kind of annotator that always returns nil, but stores
 // within itself the snippet of source code that is passed through it as tokens.
+//
+// This functionality is useful when one wishes to obtain the tokenized source as a data
+// structure, as opposed to an annotated string, allowing full control over rendering and
+// displaying it.
 type NilAnnotator struct {
 	Config     HTMLConfig
 	Code       *sourcegraph.SourceCode
