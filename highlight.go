@@ -163,14 +163,14 @@ func (a *NilAnnotator) addLine(startByte int) {
 	}
 }
 
-func (a *NilAnnotator) addMultilineComment(startByte int, unsafeHTML string) {
+func (a *NilAnnotator) addMultilineToken(startByte int, unsafeHTML string, class string) {
 	lines := strings.Split(unsafeHTML, "\n")
 	for n, unsafeHTML := range lines {
 		if len(unsafeHTML) > 0 {
 			a.addToken(&sourcegraph.SourceCodeToken{
 				StartByte: startByte,
 				EndByte:   startByte + len(unsafeHTML),
-				Class:     "com",
+				Class:     class,
 				Label:     html.EscapeString(unsafeHTML),
 			})
 			startByte += len(unsafeHTML)
@@ -187,19 +187,19 @@ func (a *NilAnnotator) Annotate(start, kind int, tokText string) (*annotate.Anno
 	start += a.byteOffset
 
 	switch {
-	// New line char
+	// New line
 	case tokText == "\n":
 		a.addLine(start + 1)
 
-	// Whitespace
+	// Whitespace token
 	case class == "":
 		a.addToken(txt)
 
-	// Multiline comment
-	case class == "com" && strings.Contains(tokText, "\n"):
+	// Multiline token (ie. block comments, string literals)
+	case strings.Contains(tokText, "\n"):
 		// Here we pass the unescaped string so we can calculate line lenghts correctly.
 		// This method is expected to take responsibility of escaping any token text.
-		a.addMultilineComment(start+1, tokText)
+		a.addMultilineToken(start+1, tokText, class)
 
 	// Token
 	default:
