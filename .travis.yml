@@ -6,5 +6,6 @@ install:
   - go get -t -v ./...
 script:
   - diff -u <(echo -n) <(gofmt -d ./)
-  - go tool vet -composites=false ./
+  - go tool vet -composites=false ./*.go
+  - go tool vet -composites=false ./cmd/
   - go test -v -race -bench=. -benchmem ./...
