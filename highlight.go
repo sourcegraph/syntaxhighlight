@@ -139,7 +139,7 @@ func NewNilAnnotator(e *vcsclient.FileWithRange) *NilAnnotator {
 		Code: &sourcegraph.SourceCode{
 			Lines: make([]*sourcegraph.SourceCodeLine, 0, bytes.Count(e.Contents, []byte("\n"))),
 		},
-		byteOffset: e.StartByte,
+		byteOffset: int(e.StartByte),
 	}
 	ann.addLine(ann.byteOffset)
 	return &ann

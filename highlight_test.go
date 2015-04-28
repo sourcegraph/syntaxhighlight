@@ -159,7 +159,7 @@ func TestCodeEquals(t *testing.T) {
 func newFileWithRange(src []byte) *vcsclient.FileWithRange {
 	return &vcsclient.FileWithRange{
 		TreeEntry: &vcsclient.TreeEntry{Contents: []byte(src)},
-		FileRange: vcsclient.FileRange{StartByte: 0, EndByte: len(src)},
+		FileRange: vcsclient.FileRange{StartByte: 0, EndByte: int64(len(src))},
 	}
 }
 
