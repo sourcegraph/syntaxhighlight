@@ -108,13 +108,12 @@ func codeEquals(code *sourcegraph.SourceCode, want [][]string) bool {
 	}
 	for i, line := range code.Lines {
 		for j, t := range line.Tokens {
-			switch t := t.(type) {
-			case *sourcegraph.SourceCodeToken:
-				if t.Label != want[i][j] {
+			if t.Token != nil {
+				if t.Token.Label != want[i][j] {
 					return false
 				}
-			case string:
-				if t != want[i][j] {
+			} else if t.Whitespace != "" {
+				if t.Whitespace != want[i][j] {
 					return false
 				}
 			}
@@ -132,18 +131,18 @@ func TestCodeEquals(t *testing.T) {
 			code: &sourcegraph.SourceCode{
 				Lines: []*sourcegraph.SourceCodeLine{
 					&sourcegraph.SourceCodeLine{
-						Tokens: []interface{}{
-							&sourcegraph.SourceCodeToken{Label: "a"},
-							&sourcegraph.SourceCodeToken{Label: "b"},
-							"c",
-							&sourcegraph.SourceCodeToken{Label: "d"},
-							"e",
+						Tokens: []sourcegraph.SourceCodeLineTokenOrString{
+							{Token: &sourcegraph.SourceCodeToken{Label: "a"}},
+							{Token: &sourcegraph.SourceCodeToken{Label: "b"}},
+							{Whitespace: "c"},
+							{Token: &sourcegraph.SourceCodeToken{Label: "d"}},
+							{Whitespace: "e"},
 						},
 					},
 					&sourcegraph.SourceCodeLine{},
 					&sourcegraph.SourceCodeLine{
-						Tokens: []interface{}{
-							"c",
+						Tokens: []sourcegraph.SourceCodeLineTokenOrString{
+							{Whitespace: "c"},
 						},
 					},
 				},
@@ -160,7 +159,7 @@ func TestCodeEquals(t *testing.T) {
 func newFileWithRange(src []byte) *vcsclient.FileWithRange {
 	return &vcsclient.FileWithRange{
 		TreeEntry: &vcsclient.TreeEntry{Contents: []byte(src)},
-		FileRange: vcsclient.FileRange{StartByte: 0, EndByte: len(src)},
+		FileRange: vcsclient.FileRange{StartByte: 0, EndByte: int64(len(src))},
 	}
 }
 
