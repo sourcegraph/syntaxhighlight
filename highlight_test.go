@@ -111,8 +111,8 @@ func codeEquals(code *sourcegraph.SourceCode, want [][]string) bool {
 				if t.Token.Label != want[i][j] {
 					return false
 				}
-			} else if t.Whitespace != "" {
-				if t.Whitespace != want[i][j] {
+			} else if t.Str != "" {
+				if t.Str != want[i][j] {
 					return false
 				}
 			}
@@ -130,18 +130,18 @@ func TestCodeEquals(t *testing.T) {
 			code: &sourcegraph.SourceCode{
 				Lines: []*sourcegraph.SourceCodeLine{
 					&sourcegraph.SourceCodeLine{
-						Tokens: []sourcegraph.SourceCodeLineTokenOrString{
+						Tokens: []sourcegraph.SourceCodeTokenOrString{
 							{Token: &sourcegraph.SourceCodeToken{Label: "a"}},
 							{Token: &sourcegraph.SourceCodeToken{Label: "b"}},
-							{Whitespace: "c"},
+							{Str: "c"},
 							{Token: &sourcegraph.SourceCodeToken{Label: "d"}},
-							{Whitespace: "e"},
+							{Str: "e"},
 						},
 					},
 					&sourcegraph.SourceCodeLine{},
 					&sourcegraph.SourceCodeLine{
-						Tokens: []sourcegraph.SourceCodeLineTokenOrString{
-							{Whitespace: "c"},
+						Tokens: []sourcegraph.SourceCodeTokenOrString{
+							{Str: "c"},
 						},
 					},
 				},
