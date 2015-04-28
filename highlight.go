@@ -142,22 +142,22 @@ func NewNilAnnotator(e *vcsclient.FileWithRange) *NilAnnotator {
 func (a *NilAnnotator) addToken(t interface{}) {
 	line := a.Code.Lines[len(a.Code.Lines)-1]
 	if line.Tokens == nil {
-		line.Tokens = make([]sourcegraph.SourceCodeLineTokenOrString, 0, 1)
+		line.Tokens = make([]sourcegraph.SourceCodeTokenOrString, 0, 1)
 	}
 	// If this token and the previous one are both strings, merge them.
 	n := len(line.Tokens)
 	if t1, ok := t.(string); ok && n > 0 {
-		if t2 := (line.Tokens[n-1]).Whitespace; t2 != "" {
-			line.Tokens[n-1].Whitespace = string(t1 + t2)
+		if t2 := (line.Tokens[n-1]).Str; t2 != "" {
+			line.Tokens[n-1].Str = string(t1 + t2)
 			return
 		}
 	}
-	var tok sourcegraph.SourceCodeLineTokenOrString
+	var tok sourcegraph.SourceCodeTokenOrString
 	switch t := t.(type) {
 	case *sourcegraph.SourceCodeToken:
 		tok.Token = t
 	case string:
-		tok.Whitespace = t
+		tok.Str = t
 	}
 	line.Tokens = append(line.Tokens, tok)
 }
