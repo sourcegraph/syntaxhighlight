@@ -148,24 +148,31 @@ func NewNilAnnotator(e *vcsclient.FileWithRange) *NilAnnotator {
 func (a *NilAnnotator) addToken(t interface{}) {
 	line := a.Code.Lines[len(a.Code.Lines)-1]
 	if line.Tokens == nil {
-		line.Tokens = make([]interface{}, 0, 1)
+		line.Tokens = make([]sourcegraph.SourceCodeLineTokenOrString, 0, 1)
 	}
 	// If this token and the previous one are both strings, merge them.
 	n := len(line.Tokens)
 	if t1, ok := t.(string); ok && n > 0 {
-		if t2, ok := (line.Tokens[n-1]).(string); ok {
-			line.Tokens[n-1] = string(t1 + t2)
+		if t2 := (line.Tokens[n-1]).Whitespace; t2 != "" {
+			line.Tokens[n-1].Whitespace = string(t1 + t2)
 			return
 		}
 	}
-	line.Tokens = append(line.Tokens, t)
+	var tok sourcegraph.SourceCodeLineTokenOrString
+	switch t := t.(type) {
+	case *sourcegraph.SourceCodeToken:
+		tok.Token = t
+	case string:
+		tok.Whitespace = t
+	}
+	line.Tokens = append(line.Tokens, tok)
 }
 
 func (a *NilAnnotator) addLine(startByte int) {
-	a.Code.Lines = append(a.Code.Lines, &sourcegraph.SourceCodeLine{StartByte: startByte})
+	a.Code.Lines = append(a.Code.Lines, &sourcegraph.SourceCodeLine{StartByte: int32(startByte)})
 	if len(a.Code.Lines) > 1 {
 		lastLine := a.Code.Lines[len(a.Code.Lines)-2]
-		lastLine.EndByte = startByte - 1
+		lastLine.EndByte = int32(startByte - 1)
 	}
 }
 
@@ -174,8 +181,8 @@ func (a *NilAnnotator) addMultilineToken(startByte int, unsafeHTML string, class
 	for n, unsafeHTML := range lines {
 		if len(unsafeHTML) > 0 {
 			a.addToken(&sourcegraph.SourceCodeToken{
-				StartByte: startByte,
-				EndByte:   startByte + len(unsafeHTML),
+				StartByte: int32(startByte),
+				EndByte:   int32(startByte + len(unsafeHTML)),
 				Class:     class,
 				Label:     html.EscapeString(unsafeHTML),
 			})
@@ -210,8 +217,8 @@ func (a *NilAnnotator) Annotate(start int, kind Kind, tokText string) (*annotate
 	// Token
 	default:
 		a.addToken(&sourcegraph.SourceCodeToken{
-			StartByte: start,
-			EndByte:   start + len(tokText),
+			StartByte: int32(start),
+			EndByte:   int32(start + len(tokText)),
 			Class:     class,
 			Label:     txt,
 		})
