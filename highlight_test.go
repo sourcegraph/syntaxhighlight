@@ -107,13 +107,12 @@ func codeEquals(code *sourcegraph.SourceCode, want [][]string) bool {
 	}
 	for i, line := range code.Lines {
 		for j, t := range line.Tokens {
-			switch t := t.(type) {
-			case *sourcegraph.SourceCodeToken:
-				if t.Label != want[i][j] {
+			if t.Token != nil {
+				if t.Token.Label != want[i][j] {
 					return false
 				}
-			case string:
-				if t != want[i][j] {
+			} else if t.Str != "" {
+				if t.Str != want[i][j] {
 					return false
 				}
 			}
@@ -131,18 +130,18 @@ func TestCodeEquals(t *testing.T) {
 			code: &sourcegraph.SourceCode{
 				Lines: []*sourcegraph.SourceCodeLine{
 					&sourcegraph.SourceCodeLine{
-						Tokens: []interface{}{
-							&sourcegraph.SourceCodeToken{Label: "a"},
-							&sourcegraph.SourceCodeToken{Label: "b"},
-							"c",
-							&sourcegraph.SourceCodeToken{Label: "d"},
-							"e",
+						Tokens: []sourcegraph.SourceCodeTokenOrString{
+							{Token: &sourcegraph.SourceCodeToken{Label: "a"}},
+							{Token: &sourcegraph.SourceCodeToken{Label: "b"}},
+							{Str: "c"},
+							{Token: &sourcegraph.SourceCodeToken{Label: "d"}},
+							{Str: "e"},
 						},
 					},
 					&sourcegraph.SourceCodeLine{},
 					&sourcegraph.SourceCodeLine{
-						Tokens: []interface{}{
-							"c",
+						Tokens: []sourcegraph.SourceCodeTokenOrString{
+							{Str: "c"},
 						},
 					},
 				},
