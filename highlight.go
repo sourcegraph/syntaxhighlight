@@ -269,7 +269,7 @@ func Print(s *scanner.Scanner, w io.Writer, p Printer) error {
 }
 
 func Annotate(src []byte, a Annotator) (annotate.Annotations, error) {
-	s := NewScanner(src)
+	s := NewScanner(bytes.NewReader(src))
 
 	var anns annotate.Annotations
 	read := 0
@@ -295,16 +295,16 @@ func Annotate(src []byte, a Annotator) (annotate.Annotations, error) {
 
 func AsHTML(src []byte) ([]byte, error) {
 	var buf bytes.Buffer
-	err := Print(NewScanner(src), &buf, HTMLPrinter(DefaultHTMLConfig))
+	err := Print(NewScanner(bytes.NewReader(src)), &buf, HTMLPrinter(DefaultHTMLConfig))
 	if err != nil {
 		return nil, err
 	}
 	return buf.Bytes(), nil
 }
 
-func NewScanner(src []byte) *scanner.Scanner {
+func NewScanner(r io.Reader) *scanner.Scanner {
 	var s scanner.Scanner
-	s.Init(bytes.NewReader(src))
+	s.Init(r)
 	s.Error = func(_ *scanner.Scanner, _ string) {}
 	s.Whitespace = 0
 	s.Mode = s.Mode ^ scanner.SkipComments
