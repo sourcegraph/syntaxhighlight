@@ -40,6 +40,8 @@ type Printer interface {
 	Print(w io.Writer, kind Kind, tokText string) error
 }
 
+// HTMLConfig holds the HTML class configuration to be used by annotators when
+// highlighting code.
 type HTMLConfig struct {
 	String        string
 	Keyword       string
@@ -58,6 +60,7 @@ type HTMLConfig struct {
 
 type HTMLPrinter HTMLConfig
 
+// Class returns the set class for a given token Kind.
 func (c HTMLConfig) Class(kind Kind) string {
 	switch kind {
 	case String:
