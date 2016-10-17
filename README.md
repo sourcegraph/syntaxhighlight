@@ -14,6 +14,9 @@ The main [`AsHTML(src []byte) ([]byte, error)`](https://sourcegraph.com/sourcegr
 ```
 go get -u github.com/sourcegraph/syntaxhighlight
 ```
+First you should install the golang evironment, you can download it [here](https://golang.org/dl) or you can follow the [getting started](https://golang.org/doc/install)
+
+Remember you should set the environment variables correctly (GOPATH and PATH)
 
 ## Example usage
 
