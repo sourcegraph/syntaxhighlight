@@ -16,6 +16,36 @@ import (
 var saveExp = flag.Bool("exp", false, "overwrite all expected output files with actual output (returning a failure)")
 var match = flag.String("m", "", "only run tests whose name contains this string")
 
+func testExpected(t *testing.T, fn, path, name, ext string, got []byte, err error) {
+	if err != nil {
+		t.Errorf("%s: %s: %s", fn, name, err)
+		return
+	}
+
+	expPath := path + ext
+	if *saveExp {
+		err = ioutil.WriteFile(expPath, got, 0700)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return
+	}
+
+	want, err := ioutil.ReadFile(expPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want = bytes.TrimSpace(want)
+	got = bytes.TrimSpace(got)
+
+	if !bytes.Equal(want, got) {
+		t.Errorf("%s: %s:\nwant ==========\n%q\ngot ===========\n%q", fn, name, want, got)
+		return
+	}
+	return
+}
+
 func TestAsHTML(t *testing.T) {
 	dir := "testdata"
 	tests, err := ioutil.ReadDir(dir)
@@ -43,32 +73,10 @@ func TestAsHTML(t *testing.T) {
 		}
 
 		got, err := AsHTML(input)
-		if err != nil {
-			t.Errorf("%s: AsHTML: %s", name, err)
-			continue
-		}
+		testExpected(t, "AsHTML", path, name, ".html", got, err)
 
-		expPath := path + ".html"
-		if *saveExp {
-			err = ioutil.WriteFile(expPath, got, 0700)
-			if err != nil {
-				t.Fatal(err)
-			}
-			continue
-		}
-
-		want, err := ioutil.ReadFile(expPath)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		want = bytes.TrimSpace(want)
-		got = bytes.TrimSpace(got)
-
-		if !bytes.Equal(want, got) {
-			t.Errorf("%s:\nwant ==========\n%q\ngot ===========\n%q", name, want, got)
-			continue
-		}
+		got, err = AsHTML(input, OrderedList())
+		testExpected(t, "AsOrderedListHTML", path, name, ".ol.html", got, err)
 	}
 
 	if *saveExp {
