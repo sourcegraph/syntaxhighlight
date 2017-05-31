@@ -6,7 +6,6 @@ package syntaxhighlight
 import (
 	"bytes"
 	"io"
-	"strings"
 	"text/scanner"
 	"text/template"
 	"unicode"
