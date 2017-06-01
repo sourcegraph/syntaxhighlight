@@ -194,15 +194,29 @@ var DefaultHTMLConfig = HTMLConfig{
 }
 
 func Print(s *scanner.Scanner, w io.Writer, p Printer) error {
+	accum := ""
+	lastKind := Whitespace
 	tok := s.Scan()
 	for tok != scanner.EOF {
-		tokText := s.TokenText()
-		err := p.Print(w, tokenKind(tok, tokText), tokText)
-		if err != nil {
+		text := s.TokenText()
+		kind := tokenKind(tok, text)
+		if kind != lastKind {
+			if accum != "" {
+				if err := p.Print(w, lastKind, accum); err != nil {
+					return err
+				}
+				accum = ""
+			}
+			lastKind = kind
+		}
+		accum += text
+		tok = s.Scan()
+	}
+
+	if accum != "" {
+		if err := p.Print(w, lastKind, accum); err != nil {
 			return err
 		}
-
-		tok = s.Scan()
 	}
 
 	return nil
@@ -214,20 +228,38 @@ func Annotate(src []byte, a Annotator) (annotate.Annotations, error) {
 	var anns annotate.Annotations
 	read := 0
 
+	accum := ""
+	lastKind := Whitespace
 	tok := s.Scan()
 	for tok != scanner.EOF {
-		tokText := s.TokenText()
+		text := s.TokenText()
+		kind := tokenKind(tok, text)
+		if kind != lastKind {
+			if accum != "" {
+				ann, err := a.Annotate(read, lastKind, accum)
+				if err != nil {
+					return nil, err
+				}
+				read += len(accum)
+				if ann != nil {
+					anns = append(anns, ann)
+				}
+				accum = ""
+			}
+			lastKind = kind
+		}
+		accum += text
+		tok = s.Scan()
+	}
 
-		ann, err := a.Annotate(read, tokenKind(tok, tokText), tokText)
+	if accum != "" {
+		ann, err := a.Annotate(read, lastKind, accum)
 		if err != nil {
 			return nil, err
 		}
-		read += len(tokText)
 		if ann != nil {
 			anns = append(anns, ann)
 		}
-
-		tok = s.Scan()
 	}
 
 	return anns, nil
